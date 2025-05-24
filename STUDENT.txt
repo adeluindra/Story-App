@@ -1,0 +1,2 @@
+APP_URL=https://story-api.dicoding.dev/v1
+MAP_SERVICE_API_KEY=g8CWFj6PsMXA8JXa4H4p

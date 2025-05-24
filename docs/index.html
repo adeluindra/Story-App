@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta http-equiv="Content-Type" content="text/html;charset=UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Dicoding Story App - Share your stories with the world. A Progressive Web Application for creating, sharing, and discovering amazing stories." />
+  <meta name="theme-color" content="#2563eb" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="StoryApp" />
+  <meta name="msapplication-TileColor" content="#2563eb" />
+  <meta name="msapplication-config" content="none" />
+
+  <link rel="shortcut icon" href="favicon.png">
+  <link rel="icon" type="image/png" sizes="192x192" href="images/logo.png">
+  <link rel="apple-touch-icon" href="images/logo.png">
+  <link rel="manifest" href="manifest.json">
+  
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.3/dist/leaflet.css" />
+  
+  <script src="https://unpkg.com/leaflet@1.9.3/dist/leaflet.js"></script>
+  
+  <title>Story App - Share Your Stories</title>
+<link href="app.css" rel="stylesheet"></head>
+
+<body>
+  <a href="#main-content" class="skip-link">Skip to content</a>
+  
+  <div id="install-banner" class="install-banner" style="display: none;">
+    <div class="install-content">
+      <span>Install Story App for a better experience!</span>
+      <button id="install-button" class="install-button">Install</button>
+      <button id="dismiss-install" class="dismiss-install">×</button>
+    </div>
+  </div>
+
+  <div id="offline-indicator" class="offline-indicator" style="display: none;">
+    <span>You are currently offline. Some features may not be available.</span>
+  </div>
+
+  <header>
+    <div class="main-header container">
+      <a class="brand-name" href="#/">Story App</a>
+
+      <nav id="navigation-drawer" class="navigation-drawer">
+        <ul id="nav-list" class="nav-list">
+          <li><a href="#/">Home</a></li>
+          <li><a href="#/about">About</a></li>
+          <li><a href="#/new">Add Story</a></li>
+          <li id="auth-links"></li>
+          <li id="notification-container" class="notification-container" style="display: none;"></li>
+        </ul>
+      </nav>
+
+      <button id="drawer-button" class="drawer-button" aria-label="Toggle navigation">☰</button>
+    </div>
+  </header>
+
+  <main id="main-content" class="main-content" tabindex="-1">
+    <div id="app-shell" class="app-shell">
+      <div id="loading-indicator" class="loading-indicator" style="display: none;">
+        <div class="spinner"></div>
+        <p>Loading...</p>
+      </div>
+      
+    </div>
+  </main>
+
+  <footer class="footer">
+    <div class="container">
+      <p>Dicoding Story App &copy; 2025</p>
+    </div>
+  </footer>
+
+  <script>
+    let deferredPrompt;
+    const installBanner = document.getElementById('install-banner');
+    const installButton = document.getElementById('install-button');
+    const dismissInstall = document.getElementById('dismiss-install');
+
+    window.addEventListener('beforeinstallprompt', (e) => {
+      console.log('PWA: Install prompt available');
+      e.preventDefault();
+      deferredPrompt = e;
+      installBanner.style.display = 'block';
+    });
+
+    installButton.addEventListener('click', async () => {
+      if (deferredPrompt) {
+        deferredPrompt.prompt();
+        const { outcome } = await deferredPrompt.userChoice;
+        console.log(`PWA: User response to the install prompt: ${outcome}`);
+        deferredPrompt = null;
+        installBanner.style.display = 'none';
+      }
+    });
+
+    dismissInstall.addEventListener('click', () => {
+      installBanner.style.display = 'none';
+
+      sessionStorage.setItem('installBannerDismissed', Date.now().toString());
+    });
+
+    const dismissedTime = sessionStorage.getItem('installBannerDismissed');
+    if (dismissedTime) {
+      const oneHour = 60 * 60 * 1000; // 1 hour in milliseconds
+      if (Date.now() - parseInt(dismissedTime) < oneHour) {
+        window.addEventListener('beforeinstallprompt', (e) => {
+          e.preventDefault();
+        });
+      }
+    }
+
+    window.addEventListener('appinstalled', (evt) => {
+      console.log('PWA: App was installed successfully');
+      installBanner.style.display = 'none';
+    });
+
+    const offlineIndicator = document.getElementById('offline-indicator');
+    
+    function updateOnlineStatus() {
+      if (navigator.onLine) {
+        offlineIndicator.style.display = 'none';
+        console.log('PWA: App is online');
+      } else {
+        offlineIndicator.style.display = 'block';
+        console.log('PWA: App is offline');
+      }
+    }
+
+    window.addEventListener('online', updateOnlineStatus);
+    window.addEventListener('offline', updateOnlineStatus);
+
+    updateOnlineStatus();
+
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', async () => {
+        try {
+          const registration = await navigator.serviceWorker.register('sw.js');
+          console.log('PWA: Service Worker registered successfully:', registration);
+
+          registration.addEventListener('updatefound', () => {
+            const newWorker = registration.installing;
+            console.log('PWA: New service worker installing');
+            
+            newWorker.addEventListener('statechange', () => {
+              if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                console.log('PWA: New service worker available');
+                showUpdateNotification();
+              }
+            });
+          });
+
+          navigator.serviceWorker.addEventListener('message', (event) => {
+            console.log('PWA: Message from service worker:', event.data);
+            
+            if (event.data && event.data.type === 'NOTIFICATION_CLICKED') {
+              if (event.data.url && window.location.hash !== event.data.url) {
+                window.location.hash = event.data.url;
+              }
+            }
+          });
+
+        } catch (error) {
+          console.error('PWA: Service Worker registration failed:', error);
+        }
+      });
+    } else {
+      console.warn('PWA: Service Worker not supported');
+    }
+
+    function showUpdateNotification() {
+      const updateBanner = document.createElement('div');
+      updateBanner.className = 'update-banner';
+      updateBanner.innerHTML = `
+        <div class="update-content">
+          <span>A new version is available!</span>
+          <button onclick="window.location.reload()">Update</button>
+          <button onclick="this.parentElement.parentElement.remove()">Later</button>
+        </div>
+      `;
+      updateBanner.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        background: #2563eb;
+        color: white;
+        padding: 10px;
+        text-align: center;
+        z-index: 1000;
+      `;
+      document.body.insertBefore(updateBanner, document.body.firstChild);
+    }
+
+    window.addEventListener('load', () => {
+      if ('performance' in window) {
+        const perfData = performance.getEntriesByType('navigation')[0];
+        console.log('PWA: Page load time:', perfData.loadEventEnd - perfData.loadEventStart, 'ms');
+      }
+    });
+  </script>
+<script defer src="app.bundle.js"></script></body>
+
+</html>

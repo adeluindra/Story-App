@@ -8,9 +8,33 @@ export const createHomeTemplate = () => `
 
   <section class="content">
     <div class="latest">
-      <h2 class="latest__label">Latest Stories</h2>
+      <div class="latest__header">
+        <h2 class="latest__label">Latest Stories</h2>
+        <a href="#/favorites" class="favorites-link">
+          <span class="favorites-icon">❤️</span>
+          <span>My Favorites</span>
+          <span id="favorites-count" class="favorites-count">0</span>
+        </a>
+      </div>
       <div class="stories" id="stories"></div>
       <div class="loading" id="loading"></div>
+    </div>
+  </section>
+`;
+
+export const createFavoritesTemplate = () => `
+  <section class="favorites">
+    <div class="favorites__header">
+      <h2 class="favorites__title">My Favorite Stories</h2>
+      <a href="#/" class="back-link">← Back to Home</a>
+    </div>
+    <div class="favorites__content">
+      <div class="stories" id="favorite-stories"></div>
+      <div class="loading" id="loading"></div>
+      <div class="empty-favorites" id="empty-favorites" style="display: none;">
+        <p>No favorite stories yet. Start adding some from the home page!</p>
+        <a href="#/" class="button">Browse Stories</a>
+      </div>
     </div>
   </section>
 `;
@@ -32,15 +56,25 @@ export const createAboutTemplate = () => `
   </section>
 `;
 
-export const createStoryItemTemplate = (story) => `
+export const createStoryItemTemplate = (story, isFavorite = false) => `
   <article class="story-item" tabindex="0">
     <div class="story-item__header">
       <h3 class="story-item__name">${story.name}</h3>
-      <time class="story-item__date" datetime="${story.createdAt}">${new Date(story.createdAt).toLocaleDateString('en-US', { 
-        year: 'numeric', 
-        month: 'long', 
-        day: 'numeric' 
-      })}</time>
+      <div class="story-item__meta">
+        <time class="story-item__date" datetime="${story.createdAt}">${new Date(story.createdAt).toLocaleDateString('en-US', { 
+          year: 'numeric', 
+          month: 'long', 
+          day: 'numeric' 
+        })}</time>
+        <button 
+          class="favorite-btn ${isFavorite ? 'favorited' : ''}" 
+          data-story-id="${story.id}"
+          title="${isFavorite ? 'Remove from favorites' : 'Add to favorites'}"
+          aria-label="${isFavorite ? 'Remove from favorites' : 'Add to favorites'}"
+        >
+          <span class="favorite-icon">${isFavorite ? '❤️' : '🤍'}</span>
+        </button>
+      </div>
     </div>
     <div class="story-item__content">
       <img 
@@ -61,15 +95,26 @@ export const createStoryItemTemplate = (story) => `
   </article>
 `;
 
-export const createStoryDetailTemplate = (story) => `
+export const createStoryDetailTemplate = (story, isFavorite = false) => `
   <section class="story-detail">
     <div class="story-detail__header">
       <h2 class="story-detail__title">${story.name}'s Story</h2>
-      <time class="story-detail__date" datetime="${story.createdAt}">${new Date(story.createdAt).toLocaleDateString('en-US', { 
-        year: 'numeric', 
-        month: 'long', 
-        day: 'numeric' 
-      })}</time>
+      <div class="story-detail__meta">
+        <time class="story-detail__date" datetime="${story.createdAt}">${new Date(story.createdAt).toLocaleDateString('en-US', { 
+          year: 'numeric', 
+          month: 'long', 
+          day: 'numeric' 
+        })}</time>
+        <button 
+          class="favorite-btn large ${isFavorite ? 'favorited' : ''}" 
+          id="favorite-btn"
+          data-story-id="${story.id}"
+          title="${isFavorite ? 'Remove from favorites' : 'Add to favorites'}"
+        >
+          <span class="favorite-icon">${isFavorite ? '❤️' : '🤍'}</span>
+          <span class="favorite-text">${isFavorite ? 'Remove from Favorites' : 'Add to Favorites'}</span>
+        </button>
+      </div>
     </div>
     <div class="story-detail__content">
       <img 

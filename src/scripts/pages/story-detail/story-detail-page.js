@@ -1,5 +1,6 @@
 import { createLoadingTemplate } from '../../templates';
 import StoryDetailPresenter from './story-detail-presenter';
+import indexedDBHandler from '../../data/indexeddb';
 
 const StoryDetailPage = {
   render() {
@@ -22,8 +23,82 @@ const StoryDetailPage = {
         this.loadingElement.style.display = 'none';
       },
       
-      renderStory(storyTemplate) {
+      async renderStory(story) {
+        // Check if story is in favorites
+        const isFavorite = await this._checkFavoriteStatus(story.id);
+        
+        // Create template with favorite status
+        const storyTemplate = this._createStoryDetailTemplate(story, isFavorite);
         this.container.innerHTML = storyTemplate;
+
+        // Add favorite button event listener
+        const favoriteBtn = document.getElementById('favorite-btn');
+        if (favoriteBtn) {
+          favoriteBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            this._toggleFavorite(story, favoriteBtn);
+          });
+        }
+      },
+
+      async _checkFavoriteStatus(storyId) {
+        try {
+          return await indexedDBHandler.isFavorite(storyId);
+        } catch (error) {
+          console.error('Error checking favorite status:', error);
+          return false;
+        }
+      },
+
+      async _toggleFavorite(story, buttonElement) {
+        try {
+          const isCurrentlyFavorite = buttonElement.classList.contains('favorited');
+          
+          if (isCurrentlyFavorite) {
+            // Remove from favorites
+            await indexedDBHandler.removeFromFavorites(story.id);
+            buttonElement.classList.remove('favorited');
+            buttonElement.querySelector('.favorite-icon').textContent = '🤍';
+            buttonElement.querySelector('.favorite-text').textContent = 'Add to Favorites';
+            buttonElement.title = 'Add to favorites';
+            this._showToast('Removed from favorites', 'success');
+          } else {
+            // Add to favorites
+            await indexedDBHandler.addToFavorites(story);
+            buttonElement.classList.add('favorited');
+            buttonElement.querySelector('.favorite-icon').textContent = '❤️';
+            buttonElement.querySelector('.favorite-text').textContent = 'Remove from Favorites';
+            buttonElement.title = 'Remove from favorites';
+            this._showToast('Added to favorites', 'success');
+          }
+        } catch (error) {
+          console.error('Error toggling favorite:', error);
+          this._showToast('Error updating favorites', 'error');
+        }
+      },
+
+      _createStoryDetailTemplate(story, isFavorite) {
+        const { createStoryDetailTemplate } = require('../../templates');
+        return createStoryDetailTemplate(story, isFavorite);
+      },
+
+      _showToast(message, type = 'info') {
+        const toast = document.createElement('div');
+        toast.className = `toast toast-${type}`;
+        toast.textContent = message;
+        document.body.appendChild(toast);
+        
+        setTimeout(() => {
+          toast.classList.add('show');
+          setTimeout(() => {
+            toast.classList.remove('show');
+            setTimeout(() => {
+              if (document.body.contains(toast)) {
+                document.body.removeChild(toast);
+              }
+            }, 300);
+          }, 3000);
+        }, 100);
       },
       
       initMap(story) {

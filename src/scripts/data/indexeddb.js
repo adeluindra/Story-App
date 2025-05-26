@@ -1,6 +1,7 @@
 const DB_NAME = 'StoryAppDB';
-const DB_VERSION = 1;
+const DB_VERSION = 2; // Increment version untuk upgrade
 const STORIES_STORE = 'stories';
+const FAVORITES_STORE = 'favorites'; // Store baru untuk favorites
 
 class IndexedDBHandler {
   constructor() {
@@ -23,6 +24,7 @@ class IndexedDBHandler {
       request.onupgradeneeded = (event) => {
         const db = event.target.result;
         
+        // Stories store (existing)
         if (!db.objectStoreNames.contains(STORIES_STORE)) {
           const storiesStore = db.createObjectStore(STORIES_STORE, { 
             keyPath: 'id',
@@ -32,10 +34,22 @@ class IndexedDBHandler {
           storiesStore.createIndex('createdAt', 'createdAt', { unique: false });
           storiesStore.createIndex('name', 'name', { unique: false });
         }
+
+        // Favorites store (new)
+        if (!db.objectStoreNames.contains(FAVORITES_STORE)) {
+          const favoritesStore = db.createObjectStore(FAVORITES_STORE, { 
+            keyPath: 'id',
+            autoIncrement: false 
+          });
+          
+          favoritesStore.createIndex('savedAt', 'savedAt', { unique: false });
+          favoritesStore.createIndex('name', 'name', { unique: false });
+        }
       };
     });
   }
 
+  // EXISTING METHODS (keep as is)
   async saveStories(stories) {
     if (!this.db) {
       await this.init();
@@ -223,16 +237,129 @@ class IndexedDBHandler {
     );
   }
 
+  // NEW FAVORITE METHODS
+  async addToFavorites(story) {
+    if (!this.db) {
+      await this.init();
+    }
+
+    return new Promise((resolve, reject) => {
+      const transaction = this.db.transaction([FAVORITES_STORE], 'readwrite');
+      const store = transaction.objectStore(FAVORITES_STORE);
+
+      const favoriteStory = {
+        ...story,
+        savedAt: new Date().toISOString(),
+        isFavorite: true
+      };
+
+      const request = store.put(favoriteStory);
+
+      request.onsuccess = () => {
+        resolve(favoriteStory);
+      };
+
+      request.onerror = () => {
+        reject(new Error(`Failed to add story to favorites: ${story.id}`));
+      };
+    });
+  }
+
+  async removeFromFavorites(storyId) {
+    if (!this.db) {
+      await this.init();
+    }
+
+    return new Promise((resolve, reject) => {
+      const transaction = this.db.transaction([FAVORITES_STORE], 'readwrite');
+      const store = transaction.objectStore(FAVORITES_STORE);
+      const request = store.delete(storyId);
+
+      request.onsuccess = () => {
+        resolve(true);
+      };
+
+      request.onerror = () => {
+        reject(new Error(`Failed to remove story from favorites: ${storyId}`));
+      };
+    });
+  }
+
+  async getAllFavorites() {
+    if (!this.db) {
+      await this.init();
+    }
+
+    return new Promise((resolve, reject) => {
+      const transaction = this.db.transaction([FAVORITES_STORE], 'readonly');
+      const store = transaction.objectStore(FAVORITES_STORE);
+      const request = store.getAll();
+
+      request.onsuccess = () => {
+        const favorites = request.result || [];
+        favorites.sort((a, b) => new Date(b.savedAt) - new Date(a.savedAt));
+        resolve(favorites);
+      };
+
+      request.onerror = () => {
+        reject(new Error('Failed to retrieve favorites from IndexedDB'));
+      };
+    });
+  }
+
+  async isFavorite(storyId) {
+    if (!this.db) {
+      await this.init();
+    }
+
+    return new Promise((resolve, reject) => {
+      const transaction = this.db.transaction([FAVORITES_STORE], 'readonly');
+      const store = transaction.objectStore(FAVORITES_STORE);
+      const request = store.get(storyId);
+
+      request.onsuccess = () => {
+        resolve(!!request.result);
+      };
+
+      request.onerror = () => {
+        reject(new Error(`Failed to check favorite status: ${storyId}`));
+      };
+    });
+  }
+
+  async getFavoritesCount() {
+    if (!this.db) {
+      await this.init();
+    }
+
+    return new Promise((resolve, reject) => {
+      const transaction = this.db.transaction([FAVORITES_STORE], 'readonly');
+      const store = transaction.objectStore(FAVORITES_STORE);
+      const request = store.count();
+
+      request.onsuccess = () => {
+        resolve(request.result);
+      };
+
+      request.onerror = () => {
+        reject(new Error('Failed to count favorites'));
+      };
+    });
+  }
+
   static isSupported() {
     return 'indexedDB' in window;
   }
 
   async getDBInfo() {
-    const count = await this.getStoriesCount();
+    const storiesCount = await this.getStoriesCount();
+    const favoritesCount = await this.getFavoritesCount();
+    
     return {
       name: DB_NAME,
       version: DB_VERSION,
-      storiesCount: count,
+      storiesCount: storiesCount,
+      favoritesCount: favoritesCount,
       isConnected: !!this.db
     };
   }

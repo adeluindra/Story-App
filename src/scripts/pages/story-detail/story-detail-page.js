@@ -24,14 +24,11 @@ const StoryDetailPage = {
       },
       
       async renderStory(story) {
-        // Check if story is in favorites
         const isFavorite = await this._checkFavoriteStatus(story.id);
         
-        // Create template with favorite status
         const storyTemplate = this._createStoryDetailTemplate(story, isFavorite);
         this.container.innerHTML = storyTemplate;
 
-        // Add favorite button event listener
         const favoriteBtn = document.getElementById('favorite-btn');
         if (favoriteBtn) {
           favoriteBtn.addEventListener('click', (e) => {
@@ -55,7 +52,6 @@ const StoryDetailPage = {
           const isCurrentlyFavorite = buttonElement.classList.contains('favorited');
           
           if (isCurrentlyFavorite) {
-            // Remove from favorites
             await indexedDBHandler.removeFromFavorites(story.id);
             buttonElement.classList.remove('favorited');
             buttonElement.querySelector('.favorite-icon').textContent = '🤍';
@@ -63,7 +59,6 @@ const StoryDetailPage = {
             buttonElement.title = 'Add to favorites';
             this._showToast('Removed from favorites', 'success');
           } else {
-            // Add to favorites
             await indexedDBHandler.addToFavorites(story);
             buttonElement.classList.add('favorited');
             buttonElement.querySelector('.favorite-icon').textContent = '❤️';

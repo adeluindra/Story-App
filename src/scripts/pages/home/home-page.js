@@ -14,7 +14,6 @@ const HomePage = {
     const storiesContainer = document.getElementById('stories');
     const loadingContainer = document.getElementById('loading');
 
-    // Update favorites count
     await this._updateFavoritesCount();
 
     HomePresenter.init({
@@ -48,13 +47,11 @@ const HomePage = {
       return;
     }
 
-    // Check favorite status for each story
     for (const story of stories) {
       if (!story.photoUrl) {
         story.photoUrl = './images/logo.png';
       }
-      
-      // Check if story is in favorites
+
       const isFavorite = await this._checkFavoriteStatus(story.id);
       
       const storyElement = document.createElement('div');
@@ -63,7 +60,6 @@ const HomePage = {
       const actualStoryElement = storyElement.firstElementChild;
       container.appendChild(actualStoryElement);
 
-      // Add favorite button event listener
       const favoriteBtn = actualStoryElement.querySelector('.favorite-btn');
       if (favoriteBtn) {
         favoriteBtn.addEventListener('click', (e) => {
@@ -73,7 +69,6 @@ const HomePage = {
         });
       }
 
-      // Initialize map if location exists
       if (story.lat && story.lon) {
         setTimeout(() => {
           const mapElement = document.getElementById(`map-${story.id}`);
@@ -104,7 +99,6 @@ const HomePage = {
       const isCurrentlyFavorite = buttonElement.classList.contains('favorited');
       
       if (isCurrentlyFavorite) {
-        // Remove from favorites
         await indexedDBHandler.removeFromFavorites(story.id);
         buttonElement.classList.remove('favorited');
         buttonElement.querySelector('.favorite-icon').textContent = '🤍';
@@ -112,7 +106,6 @@ const HomePage = {
         buttonElement.setAttribute('aria-label', 'Add to favorites');
         this._showToast('Removed from favorites', 'success');
       } else {
-        // Add to favorites
         await indexedDBHandler.addToFavorites(story);
         buttonElement.classList.add('favorited');
         buttonElement.querySelector('.favorite-icon').textContent = '❤️';
@@ -121,7 +114,6 @@ const HomePage = {
         this._showToast('Added to favorites', 'success');
       }
 
-      // Update favorites count
       await this._updateFavoritesCount();
     } catch (error) {
       console.error('Error toggling favorite:', error);

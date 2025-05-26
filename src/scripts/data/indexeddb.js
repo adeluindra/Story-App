@@ -1,7 +1,7 @@
 const DB_NAME = 'StoryAppDB';
-const DB_VERSION = 2; // Increment version untuk upgrade
+const DB_VERSION = 2;
 const STORIES_STORE = 'stories';
-const FAVORITES_STORE = 'favorites'; // Store baru untuk favorites
+const FAVORITES_STORE = 'favorites'; 
 
 class IndexedDBHandler {
   constructor() {
@@ -23,8 +23,7 @@ class IndexedDBHandler {
 
       request.onupgradeneeded = (event) => {
         const db = event.target.result;
-        
-        // Stories store (existing)
+
         if (!db.objectStoreNames.contains(STORIES_STORE)) {
           const storiesStore = db.createObjectStore(STORIES_STORE, { 
             keyPath: 'id',
@@ -35,7 +34,6 @@ class IndexedDBHandler {
           storiesStore.createIndex('name', 'name', { unique: false });
         }
 
-        // Favorites store (new)
         if (!db.objectStoreNames.contains(FAVORITES_STORE)) {
           const favoritesStore = db.createObjectStore(FAVORITES_STORE, { 
             keyPath: 'id',
@@ -49,7 +47,6 @@ class IndexedDBHandler {
     });
   }
 
-  // EXISTING METHODS (keep as is)
   async saveStories(stories) {
     if (!this.db) {
       await this.init();
@@ -237,7 +234,6 @@ class IndexedDBHandler {
     );
   }
 
-  // NEW FAVORITE METHODS
   async addToFavorites(story) {
     if (!this.db) {
       await this.init();
